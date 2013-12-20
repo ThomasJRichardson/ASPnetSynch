@@ -1,0 +1,59 @@
+--re-run in tables then do this
+disable trigger aspnet_profile_utr on aspnet_profile
+go
+disable trigger aspnet_membership_utr on aspnet_membership
+go
+disable trigger aspnet_users_utr on aspnet_users
+go
+
+update aspnet_profile
+set Address1 = '73 Bride Street'
+where userid = 'F35A8A8A-C651-45A8-95A6-00276752725C'
+go
+update aspnet_membership
+set Email = 'email@dotcom3.com'
+where userid = 'F35A8A8A-C651-45A8-95A6-00276752725C'
+go
+
+--set up test
+enable trigger aspnet_profile_utr on aspnet_profile
+go
+enable trigger aspnet_membership_utr on aspnet_membership
+go
+enable trigger aspnet_users_utr on aspnet_users
+go
+	--populate log file as if data was updated on the web and hsa been pulled down
+update aspnet_profile
+set Address1 = '72 Bride Street'
+where userid = 'F35A8A8A-C651-45A8-95A6-00276752725C'
+go
+update aspnet_membership
+set Email = 'email@dotcom2.com'
+where userid = 'F35A8A8A-C651-45A8-95A6-00276752725C'
+go
+
+disable trigger aspnet_profile_utr on aspnet_profile
+go
+disable trigger aspnet_membership_utr on aspnet_membership
+go
+disable trigger aspnet_users_utr on aspnet_users
+go
+
+	--reset local data to before web log
+update aspnet_profile
+set Address1 = '73 Bride Street'
+where userid = 'F35A8A8A-C651-45A8-95A6-00276752725C'
+go
+update aspnet_membership
+set Email = 'email@dotcom3.com'
+where userid = 'F35A8A8A-C651-45A8-95A6-00276752725C'
+go
+
+select * from aspnet_profile where userid = 'F35A8A8A-C651-45A8-95A6-00276752725C'
+select * from aspnet_membership where userid = 'F35A8A8A-C651-45A8-95A6-00276752725C'
+select * from ASP_PROFILE_UPDATES
+go
+
+--Run Job
+
+exec dbo.Synch_ASPnet
