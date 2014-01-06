@@ -1,13 +1,7 @@
 USE [APT2012]
 GO
 
-
-/* Environments:
-	PReProd	[10.192.23.11]
-	PROD	[10.192.23.10]
-*/
-
-/****** Object:  StoredProcedure [dbo].[Synch_ASPnet_Password]    Script Date: 11/19/2013 09:32:42 ******/
+/****** Object:  StoredProcedure [dbo].[Synch_ASPnet_Password]    Script Date: 01/06/2014 17:12:42 ******/
 IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Synch_ASPnet_Password]') AND type in (N'P', N'PC'))
 DROP PROCEDURE [dbo].[Synch_ASPnet_Password]
 GO
@@ -15,12 +9,14 @@ GO
 USE [APT2012]
 GO
 
-/****** Object:  StoredProcedure [dbo].[Synch_ASPnet_Password]    Script Date: 11/19/2013 09:32:42 ******/
+/****** Object:  StoredProcedure [dbo].[Synch_ASPnet_Password]    Script Date: 01/06/2014 17:12:42 ******/
 SET ANSI_NULLS ON
 GO
 
 SET QUOTED_IDENTIFIER ON
 GO
+
+
 
 CREATE PROCEDURE [dbo].[Synch_ASPnet_Password]
 AS
@@ -70,7 +66,7 @@ Begin Try
 		ID
 
 	from	ASP_PASSWORD_UPDATE_WEB
-/*
+
 	EXCEPT
 
 	select	[UserId],
@@ -91,12 +87,12 @@ Begin Try
 		ID
 
 	from	ASP_PASSWORD_UPDATE_LOG;
-*/
+
 
 		select convert(varchar,@@ROWCOUNT) + ' added from Web to ASP_PASSWORD_UPDATE_LOG by Synch_ASPnet_Password';
 
 /*
-	--Update Passwords - Local & Sungard
+	--Update Usernames - Local & Sungard
 
 	update AU
 	set	AU.UserName = APU.UserName,
@@ -134,46 +130,42 @@ Begin Try
 
 		select convert(varchar,@@ROWCOUNT) + ' updates to WEB.aspnet_Users by Synch_ASPnet_Password';
 */
-	--Update Membership - Local & Sungard
+	--Update Passwords - Local & Sungard
 
 	update AM
 	set	AM.Password = APU.Password,
 		AM.PasswordFormat = APU.PasswordFormat,
 		AM.PasswordSalt = APU.PasswordSalt,
-		AM.MobilePIN = isnull(APU.MobilePIN,'')
+		AM.MobilePIN = isnull(APU.MobilePIN,''),
+		AM.IsLockedOut = 0,
+		AM.FailedPasswordAttemptCount = 0
 	from		ASP_PASSWORD_UPDATE_LOG APU
 	inner join	(select Z.UserId,Z._CreatedWhen,Z.maxID from
 			(select UserId,_CreatedWhen,max(ID) as maxID from ASP_PASSWORD_UPDATE_LOG group by UserId,_CreatedWhen) Z
 	inner join	(select UserId, max(_CreatedWhen) as maxCreatedWhen from ASP_PASSWORD_UPDATE_LOG group by UserId) MCW
 		on Z.UserId=MCW.UserId and Z._CreatedWhen=MCW.maxCreatedWhen) X
 		on APU.ID = X.maxID	
-	inner join	aspnet_Membership AM on AM.UserId = APU.UserId
-	where	AM.Password <> APU.PAssword
-	or	AM.PasswordFormat <> APU.PasswordFormat
-	or	AM.PasswordSalt <> APU.PasswordSalt
-	or	AM.MobilePIN <> isnull(APU.MobilePIN,'');
-
+	inner join	aspnet_Membership AM on AM.UserId = APU.UserId;
+	
 		select convert(varchar,@@ROWCOUNT) + ' updates to LCL.aspnet_Membership by Synch_ASPnet_Password';
-/*
+
 	update AM
 	set	AM.Password = APU.Password,
 		AM.PasswordFormat = APU.PasswordFormat,
 		AM.PasswordSalt = APU.PasswordSalt,
-		AM.MobilePIN = isnull(APU.MobilePIN,'')
+		AM.MobilePIN = isnull(APU.MobilePIN,''),
+		AM.IsLockedOut = 0,
+		AM.FailedPasswordAttemptCount = 0
 	from		ASP_PASSWORD_UPDATE_LOG APU
 	inner join	(select Z.UserId,Z._CreatedWhen,Z.maxID from
 			(select UserId,_CreatedWhen,max(ID) as maxID from ASP_PASSWORD_UPDATE_LOG group by UserId,_CreatedWhen) Z
 	inner join	(select UserId, max(_CreatedWhen) as maxCreatedWhen from ASP_PASSWORD_UPDATE_LOG group by UserId) MCW
 		on Z.UserId=MCW.UserId and Z._CreatedWhen=MCW.maxCreatedWhen) X
 		on APU.ID = X.maxID	
-	inner join	[10.192.23.10].[APT2012].[dbo].aspnet_Membership AM on AM.UserId = APU.UserId
-	where	AM.Password <> APU.PAssword
-	or	AM.PasswordFormat <> APU.PasswordFormat
-	or	AM.PasswordSalt <> APU.PasswordSalt
-	or	AM.MobilePIN <> isnull(APU.MobilePIN,'');
+	inner join	[10.192.23.10].[APT2012].[dbo].aspnet_Membership AM on AM.UserId = APU.UserId;
 
 		select convert(varchar,@@ROWCOUNT) + ' updates to WEB.aspnet_Membership by Synch_ASPnet_Password';
-*/
+
 	--Archive update log
 
 	insert into ASP_PASSWORD_HIST (
@@ -233,4 +225,8 @@ END CATCH
 
 --END OF: Apply ASPnet PAssword updates to ASPnet
 
+
+
 GO
+
+
